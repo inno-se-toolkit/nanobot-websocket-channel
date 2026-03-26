@@ -46,4 +46,6 @@ Server → Client: {"type": "text", "content": "response", "format": "markdown"}
 
 Structured response types: `text`, `choice` (buttons), `confirm` (yes/no), `composite` (text + interaction).
 
-API key: passed as query parameter `?api_key=...` on WebSocket connect. The channel prepends `[LMS_API_KEY=<key>]` to every message so the agent can authenticate backend requests.
+Required deployment key: pass `?access_key=...` on WebSocket connect. The channel validates it against `NANOBOT_ACCESS_KEY` and refuses to start if that env var is missing.
+
+Optional LMS key: LMS-aware clients may also pass `?api_key=...`. The channel forwards it to the agent as a legacy `[LMS_API_KEY=...]` prompt prefix so per-user LMS flows keep working without reusing that key as deployment auth.

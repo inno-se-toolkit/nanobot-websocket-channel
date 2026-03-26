@@ -20,7 +20,7 @@ class _ChatbotAppState extends State<ChatbotApp> {
   @override
   void initState() {
     super.initState();
-    _token = web.window.localStorage.getItem('api_key') ?? '';
+    _token = web.window.localStorage.getItem('access_key') ?? '';
   }
 
   void _handleLogin(String token) {
@@ -28,14 +28,14 @@ class _ChatbotAppState extends State<ChatbotApp> {
   }
 
   void _handleDisconnect() {
-    web.window.localStorage.removeItem('api_key');
+    web.window.localStorage.removeItem('access_key');
     setState(() => _token = '');
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'LMS Chatbot',
+      title: 'Nanobot',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
@@ -44,7 +44,7 @@ class _ChatbotAppState extends State<ChatbotApp> {
       home: _token.isEmpty
           ? LoginScreen(onLogin: _handleLogin)
           : ChatScreen(
-              apiKey: _token,
+              accessKey: _token,
               onDisconnect: _handleDisconnect,
             ),
     );

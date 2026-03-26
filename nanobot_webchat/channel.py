@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import uuid
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -39,9 +40,12 @@ class WebChatChannel(BaseChannel):
         Client -> Server:  {"content": "hello"}
         Server -> Client:  {"content": "response text"}
 
-    Clients may pass an LMS API key via query parameter:
-        ws://host:port?api_key=SECRET
-    The key is prepended to every message so the agent can use it.
+    Access control:
+        Set NANOBOT_ACCESS_KEY env var to require authentication.
+        Clients pass the key via query parameter: ws://host:port?access_key=SECRET
+        Connections without a valid key are rejected. LMS-aware clients may
+        also provide ?api_key=...; when present it is forwarded to the agent
+        as a prompt prefix for backwards compatibility.
     """
 
     name = "webchat"
@@ -56,22 +60,21 @@ class WebChatChannel(BaseChannel):
             config = WebChatConfig.model_validate(config)
         super().__init__(config, bus)
         self.config: WebChatConfig = config
-        # chat_id -> websocket connection
         self._connections: dict[str, ServerConnection] = {}
-        # chat_id -> api_key (if provided via query param)
-        self._api_keys: dict[str, str] = {}
         self._server: WebSocketServer | None = None
+        self._access_key: str = os.environ.get("NANOBOT_ACCESS_KEY", "")
 
     async def start(self) -> None:
         """Start the WebSocket server."""
         self._running = True
+        if not self._access_key:
+            raise RuntimeError("WebChat: NANOBOT_ACCESS_KEY must be set")
         logger.info("WebChat starting on {}:{}", self.config.host, self.config.port)
         self._server = await websockets.serve(
             self._handle_ws,
             self.config.host,
             self.config.port,
         )
-        # Block until stopped
         while self._running:
             await asyncio.sleep(1)
 
@@ -83,14 +86,9 @@ class WebChatChannel(BaseChannel):
             await self._server.wait_closed()
             self._server = None
         self._connections.clear()
-        self._api_keys.clear()
 
     async def send(self, msg: OutboundMessage) -> None:
-        """Send a message back to the client via its WebSocket.
-
-        Parses the agent's content into a structured message (choice, confirm,
-        composite) when possible, otherwise wraps it as plain text.
-        """
+        """Send a message back to the client via its WebSocket."""
         ws = self._connections.get(msg.chat_id)
         if ws is None:
             logger.warning("WebChat: no connection for chat_id={}", msg.chat_id)
@@ -101,24 +99,25 @@ class WebChatChannel(BaseChannel):
         except websockets.ConnectionClosed:
             logger.info("WebChat: connection closed for chat_id={}", msg.chat_id)
             self._connections.pop(msg.chat_id, None)
-            self._api_keys.pop(msg.chat_id, None)
 
     async def _handle_ws(self, ws: ServerConnection) -> None:
         """Handle a single WebSocket connection lifecycle."""
-        chat_id = str(uuid.uuid4())
-        self._connections[chat_id] = ws
-        sender_id = chat_id  # anonymous web user
-
-        # Read api_key from query string (e.g. ws://host:port?api_key=SECRET)
+        # Validate access key
         path: str = ws.request.path if ws.request is not None else ""
         qs = parse_qs(urlparse(path).query)
-        api_key: str = qs.get("api_key", [""])[0]
-        if api_key:
-            self._api_keys[chat_id] = api_key
+        client_key: str = qs.get("access_key", [""])[0]
+        api_key: str = qs.get("api_key", [""])[0].strip()
 
-        logger.info(
-            "WebChat: new connection chat_id={} auth={}", chat_id, bool(api_key)
-        )
+        if self._access_key and client_key != self._access_key:
+            logger.warning("WebChat: rejected connection — invalid access key")
+            await ws.close(4001, "Invalid access key")
+            return
+
+        chat_id = str(uuid.uuid4())
+        self._connections[chat_id] = ws
+        sender_id = chat_id
+
+        logger.info("WebChat: new connection chat_id={}", chat_id)
 
         try:
             async for raw in ws:
@@ -131,10 +130,10 @@ class WebChatChannel(BaseChannel):
                 if not content:
                     continue
 
-                # Inject per-session API key so the agent can use it
-                key = self._api_keys.get(chat_id)
-                if key:
-                    content = f"[LMS_API_KEY={key}]\n{content}"
+                if api_key:
+                    # Preserve the legacy per-user LMS credential flow used by
+                    # the Telegram client without reusing it as deployment auth.
+                    content = f"[LMS_API_KEY={api_key}] {content}"
 
                 await self._handle_message(
                     sender_id=sender_id,
@@ -145,5 +144,4 @@ class WebChatChannel(BaseChannel):
             pass
         finally:
             self._connections.pop(chat_id, None)
-            self._api_keys.pop(chat_id, None)
             logger.info("WebChat: disconnected chat_id={}", chat_id)

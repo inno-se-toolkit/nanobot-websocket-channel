@@ -1,4 +1,3 @@
-import 'dart:js_interop';
 import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 
@@ -14,42 +13,16 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _controller = TextEditingController();
   String? _error;
-  bool _loading = false;
 
-  Future<void> _handleConnect() async {
+  void _handleConnect() {
     final key = _controller.text.trim();
-    if (key.isEmpty) return;
-
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final response = await web.window.fetch(
-        '/items/'.toJS,
-        web.RequestInit(
-          method: 'GET',
-          headers: {'Authorization': 'Bearer $key'}.jsify() as JSObject,
-        ),
-      ).toDart;
-
-      if (!response.ok) {
-        setState(() {
-          _error = 'Invalid API key';
-          _loading = false;
-        });
-        return;
-      }
-
-      web.window.localStorage.setItem('api_key', key);
-      widget.onLogin(key);
-    } catch (_) {
-      setState(() {
-        _error = 'Could not reach the server';
-        _loading = false;
-      });
+    if (key.isEmpty) {
+      setState(() => _error = 'Please enter your access key');
+      return;
     }
+
+    web.window.localStorage.setItem('access_key', key);
+    widget.onLogin(key);
   }
 
   @override
@@ -73,24 +46,23 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline,
+                  Icon(Icons.smart_toy_outlined,
                       size: 48,
                       color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 16),
-                  Text('LMS API Key',
+                  Text('Nanobot',
                       style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 8),
-                  const Text('Enter your LMS API key to connect.'),
+                  const Text('Enter your access key to connect.'),
                   const SizedBox(height: 24),
                   TextField(
                     controller: _controller,
                     obscureText: true,
                     decoration: const InputDecoration(
-                      labelText: 'Token',
+                      labelText: 'Access Key',
                       border: OutlineInputBorder(),
                     ),
                     onSubmitted: (_) => _handleConnect(),
-                    enabled: !_loading,
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
@@ -100,15 +72,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _loading ? null : _handleConnect,
-                      child: _loading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Connect'),
+                      onPressed: _handleConnect,
+                      child: const Text('Connect'),
                     ),
                   ),
                 ],

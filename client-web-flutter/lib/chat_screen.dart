@@ -34,10 +34,10 @@ class ChatMessage {
 }
 
 class ChatScreen extends StatefulWidget {
-  final String apiKey;
+  final String accessKey;
   final VoidCallback? onDisconnect;
 
-  const ChatScreen({super.key, required this.apiKey, this.onDisconnect});
+  const ChatScreen({super.key, required this.accessKey, this.onDisconnect});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -54,17 +54,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   static const _timeoutDuration = Duration(seconds: 90);
 
-  static const _commands = [
-    ('What labs are available?', 'Labs'),
-    ('Is the backend healthy?', 'Health'),
-    ('Show scores for lab-04', 'Scores'),
-    ('Sync the data', 'Sync'),
-  ];
-
   @override
   void initState() {
     super.initState();
-    _llm.connect(apiKey: widget.apiKey);
+    _llm.connect(accessKey: widget.accessKey);
     _sub = _llm.responses.listen(
       (content) {
         _responseTimeout?.cancel();
@@ -79,9 +72,12 @@ class _ChatScreenState extends State<ChatScreen> {
     );
     _addBotMessage(
       'Connected to Nanobot!\n\n'
-      'I can help you check system health, browse labs, view scores, '
-      'and answer questions about your LMS data.\n\n'
-      'Type a question or use the buttons below.',
+      'Start by asking:\n'
+      '• What can you do in this system?\n'
+      '• What tools do you have right now?\n'
+      '• Ask one question about the LMS or the system state.\n\n'
+      'I am more than a chat UI only when the agent has tools, skills, and memory. '
+      'Try discovering those capabilities from the conversation itself.',
     );
   }
 
@@ -142,7 +138,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('LMS Chatbot'),
+        title: const Text('Nanobot'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -169,7 +165,6 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          _buildCommandMenu(),
           _buildInputArea(),
         ],
       ),
@@ -407,35 +402,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildCommandMenu() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border(top: BorderSide(color: Colors.grey[300]!)),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: _commands.map((cmd) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ActionChip(
-                label: Text(cmd.$2),
-                onPressed: _isLoading ? null : () => _sendMessage(cmd.$1),
-                backgroundColor: Colors.white,
-                side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                labelStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.all(8),
@@ -449,7 +415,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: TextField(
               controller: _controller,
               decoration: const InputDecoration(
-                hintText: 'Type a message...',
+                hintText: 'Ask Nanobot about the system...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(24)),
                 ),

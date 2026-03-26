@@ -19,12 +19,14 @@ class LlmService {
 
   /// Connect to the nanobot webchat WebSocket.
   /// Derives the WS URL from the page origin (works when served by Caddy).
-  /// When [apiKey] is provided it is sent as a query parameter so the
-  /// nanobot can authenticate backend requests on behalf of the user.
-  void connect({String? apiKey}) {
+  /// When [accessKey] is provided it is sent as a query parameter so the
+  /// channel can validate access to the deployment.
+  void connect({String? accessKey}) {
     final origin = Uri.base;
     final scheme = origin.scheme == 'https' ? 'wss' : 'ws';
-    final query = apiKey != null ? '?api_key=${Uri.encodeComponent(apiKey)}' : '';
+    final query = accessKey != null
+        ? '?access_key=${Uri.encodeComponent(accessKey)}'
+        : '';
     final uri = Uri.parse('$scheme://${origin.host}:${origin.port}$wsUrl$query');
     _channel = WebSocketChannel.connect(uri);
     _channel!.stream.listen(

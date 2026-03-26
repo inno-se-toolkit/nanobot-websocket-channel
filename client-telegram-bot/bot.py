@@ -13,7 +13,10 @@ from services.nanobot_client import NanobotClient
 
 def main() -> None:
     user_keys: dict[int, str] = {}
-    nanobot_client = NanobotClient(ws_url=settings.nanobot_ws_url)
+    nanobot_client = NanobotClient(
+        ws_url=settings.nanobot_ws_url,
+        access_key=settings.nanobot_access_key,
+    )
     session = SessionHandlers(user_keys)
     messages = MessageHandler(nanobot_client, user_keys)
 
