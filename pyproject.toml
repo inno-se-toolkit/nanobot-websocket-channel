@@ -1,0 +1,19 @@
+[project]
+name = "nanobot-webchat"
+version = "1.0.0"
+description = "WebSocket channel plugin for nanobot-ai — enables web clients to chat with the agent"
+requires-python = ">=3.11"
+dependencies = [
+    "nanobot-ai>=0.1.4",
+    "websockets>=15.0",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["nanobot_webchat*"]
+
+[project.entry-points."nanobot.channels"]
+webchat = "nanobot_webchat:WebChatChannel"
