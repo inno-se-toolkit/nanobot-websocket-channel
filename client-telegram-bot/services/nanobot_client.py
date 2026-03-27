@@ -6,6 +6,9 @@ from typing import Any
 from urllib.parse import urlencode
 
 import websockets
+from websockets.exceptions import WebSocketException
+
+from logging_config import event_fields
 
 log = logging.getLogger(__name__)
 
@@ -34,30 +37,49 @@ class NanobotClient:
             url = f"{self.ws_url}?{urlencode(query)}"
         log.info(
             "telegram_websocket_request",
-            extra={
-                "event": "telegram_websocket_request",
-                "ws_url": self.ws_url,
-                "has_user_api_key": bool(api_key),
-                "message_length": len(message),
-            },
+            extra=event_fields(
+                "telegram_websocket_request",
+                ws_url=self.ws_url,
+                has_user_api_key=bool(api_key),
+                message_length=len(message),
+            ),
         )
-        async with websockets.connect(url, close_timeout=5) as ws:
-            await ws.send(json.dumps({"content": message}))
-            raw = await ws.recv()
-            data: dict[str, Any] = json.loads(raw)
-            log.info(
-                "telegram_websocket_response",
-                extra={
-                    "event": "telegram_websocket_response",
-                    "response_type": data.get("type", "legacy_text"),
-                    "has_content": bool(data.get("content")),
-                },
+        try:
+            async with websockets.connect(url, close_timeout=5) as ws:
+                await ws.send(json.dumps({"content": message}))
+                raw = await ws.recv()
+                data: dict[str, Any] = json.loads(raw)
+                log.info(
+                    "telegram_websocket_response",
+                    extra=event_fields(
+                        "telegram_websocket_response",
+                        response_type=data.get("type", "legacy_text"),
+                        has_content=bool(data.get("content")),
+                    ),
+                )
+                # Backwards compat: if no type field, wrap as text
+                if "type" not in data:
+                    return {
+                        "type": "text",
+                        "content": data.get("content", ""),
+                        "format": "markdown",
+                    }
+                return data
+        except json.JSONDecodeError:
+            log.exception(
+                "telegram_websocket_invalid_json",
+                extra=event_fields(
+                    "telegram_websocket_invalid_json",
+                    ws_url=self.ws_url,
+                ),
             )
-            # Backwards compat: if no type field, wrap as text
-            if "type" not in data:
-                return {
-                    "type": "text",
-                    "content": data.get("content", ""),
-                    "format": "markdown",
-                }
-            return data
+            raise
+        except (TimeoutError, WebSocketException):
+            log.exception(
+                "telegram_websocket_error",
+                extra=event_fields(
+                    "telegram_websocket_error",
+                    ws_url=self.ws_url,
+                ),
+            )
+            raise

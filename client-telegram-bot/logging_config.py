@@ -7,6 +7,11 @@ import logging
 from datetime import UTC, datetime
 
 
+def event_fields(event: str, **fields: object) -> dict[str, object]:
+    """Build a structured logging payload with a consistent event field."""
+    return {"event": event, **fields}
+
+
 class JsonFormatter(logging.Formatter):
     """Emit structured JSON logs for OTEL export and local debugging."""
 

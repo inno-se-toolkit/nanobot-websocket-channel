@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 
 from handlers import MessageHandlers, SessionHandlers, cmd_help, cmd_start
-from logging_config import configure_logging
+from logging_config import configure_logging, event_fields
 from settings import settings
 from services.nanobot_client import NanobotClient
 
@@ -36,10 +36,7 @@ def main() -> None:
 
     log.info(
         "telegram_bot_starting",
-        extra={
-            "event": "telegram_bot_starting",
-            "ws_url": settings.nanobot_ws_url,
-        },
+        extra=event_fields("telegram_bot_starting", ws_url=settings.nanobot_ws_url),
     )
     dp.run_polling(Bot(token=settings.bot_token))
 

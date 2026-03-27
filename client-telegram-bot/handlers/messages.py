@@ -8,6 +8,7 @@ from aiogram import types
 
 from handlers.intent_router import route_intent
 from handlers.renderer import render
+from logging_config import event_fields
 from services.nanobot_client import NanobotClient
 
 log = logging.getLogger(__name__)
@@ -29,12 +30,12 @@ class MessageHandlers:
             return
         log.info(
             "telegram_message",
-            extra={
-                "event": "telegram_message",
-                "user_id": message.from_user.id,
-                "chat_id": message.chat.id,
-                "message_length": len(message.text),
-            },
+            extra=event_fields(
+                "telegram_message",
+                user_id=message.from_user.id,
+                chat_id=message.chat.id,
+                message_length=len(message.text),
+            ),
         )
         response = await route_intent(
             message.text, self.nanobot_client, api_key=api_key
@@ -55,12 +56,12 @@ class MessageHandlers:
             return
         log.info(
             "telegram_callback",
-            extra={
-                "event": "telegram_callback",
-                "user_id": callback.from_user.id,
-                "chat_id": callback.message.chat.id,
-                "callback_data": callback.data,
-            },
+            extra=event_fields(
+                "telegram_callback",
+                user_id=callback.from_user.id,
+                chat_id=callback.message.chat.id,
+                callback_data=callback.data,
+            ),
         )
         response = await route_intent(
             callback.data, self.nanobot_client, api_key=api_key

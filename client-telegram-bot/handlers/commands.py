@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+
 from aiogram import types
 
-import logging
+from logging_config import event_fields
 
 log = logging.getLogger(__name__)
 
@@ -33,10 +35,10 @@ WELCOME_TEXT = (
 async def cmd_start(message: types.Message) -> None:
     log.info(
         "telegram_start",
-        extra={
-            "event": "telegram_start",
-            "user_id": message.from_user.id if message.from_user else None,
-        },
+        extra=event_fields(
+            "telegram_start",
+            user_id=message.from_user.id if message.from_user else None,
+        ),
     )
     await message.answer(WELCOME_TEXT)
 
@@ -44,9 +46,9 @@ async def cmd_start(message: types.Message) -> None:
 async def cmd_help(message: types.Message) -> None:
     log.info(
         "telegram_help",
-        extra={
-            "event": "telegram_help",
-            "user_id": message.from_user.id if message.from_user else None,
-        },
+        extra=event_fields(
+            "telegram_help",
+            user_id=message.from_user.id if message.from_user else None,
+        ),
     )
     await message.answer(HELP_TEXT)

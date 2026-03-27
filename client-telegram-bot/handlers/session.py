@@ -6,6 +6,8 @@ import logging
 
 from aiogram import types
 
+from logging_config import event_fields
+
 log = logging.getLogger(__name__)
 
 
@@ -23,10 +25,7 @@ class SessionHandlers:
         self.user_keys[message.from_user.id] = args[0]
         log.info(
             "telegram_login",
-            extra={
-                "event": "telegram_login",
-                "user_id": message.from_user.id,
-            },
+            extra=event_fields("telegram_login", user_id=message.from_user.id),
         )
         await message.answer("✅ API key saved. You can now ask questions.")
 
@@ -36,9 +35,6 @@ class SessionHandlers:
         self.user_keys.pop(message.from_user.id, None)
         log.info(
             "telegram_logout",
-            extra={
-                "event": "telegram_logout",
-                "user_id": message.from_user.id,
-            },
+            extra=event_fields("telegram_logout", user_id=message.from_user.id),
         )
         await message.answer("🔓 API key removed.")
