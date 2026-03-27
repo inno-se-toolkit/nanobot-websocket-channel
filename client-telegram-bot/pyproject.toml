@@ -1,5 +1,5 @@
 [project]
-name = "lms-client-telegram-bot"
+name = "client-telegram-bot"
 version = "0.1.0"
 description = "LMS Telegram Bot"
 requires-python = "==3.14.*"
@@ -21,8 +21,9 @@ build-backend = "setuptools.build_meta"
 [tool.uv.sources]
 nanobot-channel-protocol = { workspace = true }
 
-[tool.setuptools]
-py-modules = ["bot", "settings"]
+[project.scripts]
+client-telegram-bot = "client_telegram_bot.bot:main"
 
 [tool.setuptools.packages.find]
-include = ["handlers*", "services*"]
+where = ["src"]
+include = ["client_telegram_bot*"]

@@ -19,19 +19,17 @@ This is called **separation of concerns** — the handler logic is separate from
 ### Project Structure
 
 ```
-bot/
-├── bot.py              # Entry point with --test mode and Telegram startup
-├── config.py           # Environment variable loading from .env.docker.secret
-├── handlers/
-│   ├── __init__.py
-│   ├── commands.py     # Slash command handlers (/start, /help, /health, etc.)
-│   └── intent_router.py # LLM-based natural language routing
-├── services/
-│   ├── __init__.py
-│   ├── lms_client.py   # LMS backend API client
-│   └── llm_client.py   # LLM API client for intent routing
-├── pyproject.toml      # Bot dependencies
-└── PLAN.md             # This file
+client-telegram-bot/
+├── src/
+│   └── client_telegram_bot/
+│       ├── __main__.py
+│       ├── bot.py
+│       ├── logging_config.py
+│       ├── settings.py
+│       ├── handlers/
+│       └── services/
+├── pyproject.toml
+└── PLAN.md
 ```
 
 ## Task 1: Plan and Scaffold
@@ -40,9 +38,9 @@ bot/
 
 **Deliverables:**
 
-- `bot/bot.py` with `--test` mode support
-- `bot/handlers/` directory with placeholder handlers
-- `bot/config.py` for environment loading
+- `src/client_telegram_bot/bot.py` as the package entrypoint
+- `src/client_telegram_bot/handlers/` directory with placeholder handlers
+- `src/client_telegram_bot/settings.py` for environment loading
 - `client-telegram-bot/pyproject.toml` for dependencies
 - `.env.docker.secret` with required variables
 
@@ -96,7 +94,7 @@ bot/
 
 ## Testing Strategy
 
-1. **Test mode:** `uv run bot.py --test "/command"` for each command
+1. **Run locally:** `uv run python -m client_telegram_bot`
 2. **Edge cases:** Missing arguments, unknown commands, non-existent labs
 3. **Error handling:** Stop backend, verify friendly error messages
 4. **Telegram testing:** Deploy and test in real Telegram

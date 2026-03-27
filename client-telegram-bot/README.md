@@ -14,22 +14,10 @@ Set these environment variables before starting the bot:
 
 If your agent setup expects per-user LMS credentials, users can provide them at runtime with `/login <api_key>`. The bot will send that key separately from the deployment access key.
 
-### 2. Test mode
-
-Test commands without Telegram:
+### 2. Run the bot
 
 ```bash
-uv run bot.py --test "/start"
-uv run bot.py --test "/help"
-uv run bot.py --test "/health"
-uv run bot.py --test "/labs"
-uv run bot.py --test "/scores lab-04"
-```
-
-### 3. Run the bot
-
-```bash
-uv run bot.py
+uv run python -m client_telegram_bot
 ```
 
 ## Available Commands
@@ -69,6 +57,7 @@ docker compose --env-file .env.docker.secret up -d bot
 
 ## Architecture
 
-- **Handlers** (`handlers/`) — Command logic, testable without Telegram
-- **Services** (`services/`) — WebSocket client for the Nanobot channel
-- **Entry point** (`bot.py`) — `--test` mode and Telegram startup
+- **Package** (`src/client_telegram_bot/`) — Telegram bot application code
+- **Handlers** (`src/client_telegram_bot/handlers/`) — Command and message flow
+- **Services** (`src/client_telegram_bot/services/`) — WebSocket client for the Nanobot channel
+- **Entry point** (`python -m client_telegram_bot`) — package module startup

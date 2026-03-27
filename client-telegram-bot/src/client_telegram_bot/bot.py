@@ -8,10 +8,15 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 
-from handlers import MessageHandlers, SessionHandlers, cmd_help, cmd_start
-from logging_config import configure_logging, event_fields
-from settings import settings
-from services.nanobot_client import NanobotClient
+from client_telegram_bot.handlers import (
+    MessageHandlers,
+    SessionHandlers,
+    cmd_help,
+    cmd_start,
+)
+from client_telegram_bot.logging_config import configure_logging, event_fields
+from client_telegram_bot.services.nanobot_client import NanobotClient
+from client_telegram_bot.settings import settings
 
 log = logging.getLogger(__name__)
 

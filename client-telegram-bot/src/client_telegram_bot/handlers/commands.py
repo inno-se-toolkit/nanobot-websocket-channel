@@ -6,7 +6,7 @@ import logging
 
 from aiogram import types
 
-from logging_config import event_fields
+from client_telegram_bot.logging_config import event_fields
 
 log = logging.getLogger(__name__)
 

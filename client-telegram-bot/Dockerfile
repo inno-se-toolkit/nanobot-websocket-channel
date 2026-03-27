@@ -20,14 +20,17 @@ ENV UV_PYTHON_DOWNLOADS=0
 
 WORKDIR /app
 COPY pyproject.toml uv.lock* /app/
+COPY client-telegram-bot/pyproject.toml /app/client-telegram-bot/
+COPY nanobot-channel-protocol/pyproject.toml /app/nanobot-channel-protocol/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project
+    uv sync --frozen --package client-telegram-bot --no-install-workspace
 
-COPY . /app
+COPY client-telegram-bot /app/client-telegram-bot
+COPY nanobot-channel-protocol /app/nanobot-channel-protocol
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen
+    uv sync --frozen --package client-telegram-bot
 
 # ---
 # Stage 2: use a final image without uv
@@ -59,4 +62,4 @@ USER nonroot
 WORKDIR /app
 
 # Run the bot with OTEL auto-instrumentation
-CMD ["opentelemetry-instrument", "python", "bot.py"]
+CMD ["opentelemetry-instrument", "python", "-m", "client_telegram_bot"]

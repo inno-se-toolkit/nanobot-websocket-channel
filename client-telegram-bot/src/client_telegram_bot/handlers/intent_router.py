@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from services.nanobot_client import (
+from client_telegram_bot.services.nanobot_client import (
     NanobotAccessKeyError,
     NanobotClient,
     NanobotTimeoutError,

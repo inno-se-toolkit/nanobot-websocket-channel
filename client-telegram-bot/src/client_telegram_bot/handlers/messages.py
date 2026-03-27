@@ -6,10 +6,10 @@ import logging
 
 from aiogram import types
 
-from handlers.intent_router import route_intent
-from handlers.renderer import render
-from logging_config import event_fields
-from services.nanobot_client import NanobotClient
+from client_telegram_bot.handlers.intent_router import route_intent
+from client_telegram_bot.handlers.renderer import render
+from client_telegram_bot.logging_config import event_fields
+from client_telegram_bot.services.nanobot_client import NanobotClient
 
 log = logging.getLogger(__name__)
 

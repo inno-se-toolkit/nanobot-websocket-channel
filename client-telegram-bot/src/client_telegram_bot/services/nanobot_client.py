@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 import websockets
 from websockets.exceptions import ConnectionClosedError, WebSocketException
 
-from logging_config import event_fields
+from client_telegram_bot.logging_config import event_fields
 
 log = logging.getLogger(__name__)
 
