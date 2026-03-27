@@ -3,22 +3,28 @@
 
 from __future__ import annotations
 
+import logging
+
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 
+from handlers import MessageHandlers, SessionHandlers, cmd_help, cmd_start
+from logging_config import configure_logging
 from settings import settings
-from handlers.commands import MessageHandler, SessionHandlers, cmd_help, cmd_start
 from services.nanobot_client import NanobotClient
+
+log = logging.getLogger(__name__)
 
 
 def main() -> None:
+    configure_logging()
     user_keys: dict[int, str] = {}
     nanobot_client = NanobotClient(
         ws_url=settings.nanobot_ws_url,
         access_key=settings.nanobot_access_key,
     )
     session = SessionHandlers(user_keys)
-    messages = MessageHandler(nanobot_client, user_keys)
+    messages = MessageHandlers(nanobot_client, user_keys)
 
     dp = Dispatcher()
     dp.message.register(cmd_start, Command("start"))
@@ -28,7 +34,13 @@ def main() -> None:
     dp.message.register(messages.handle_message)
     dp.callback_query.register(messages.handle_callback)
 
-    print("Starting bot...")
+    log.info(
+        "telegram_bot_starting",
+        extra={
+            "event": "telegram_bot_starting",
+            "ws_url": settings.nanobot_ws_url,
+        },
+    )
     dp.run_polling(Bot(token=settings.bot_token))
 
 

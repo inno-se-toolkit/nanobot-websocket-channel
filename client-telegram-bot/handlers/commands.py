@@ -1,12 +1,12 @@
-"""Command and message handlers for the Telegram bot."""
+"""Basic command handlers for the Telegram bot."""
 
 from __future__ import annotations
 
 from aiogram import types
 
-from handlers.intent_router import route_intent
-from handlers.renderer import render
-from services.nanobot_client import NanobotClient
+import logging
+
+log = logging.getLogger(__name__)
 
 
 HELP_TEXT = (
@@ -31,66 +31,22 @@ WELCOME_TEXT = (
 
 
 async def cmd_start(message: types.Message) -> None:
+    log.info(
+        "telegram_start",
+        extra={
+            "event": "telegram_start",
+            "user_id": message.from_user.id if message.from_user else None,
+        },
+    )
     await message.answer(WELCOME_TEXT)
 
 
 async def cmd_help(message: types.Message) -> None:
+    log.info(
+        "telegram_help",
+        extra={
+            "event": "telegram_help",
+            "user_id": message.from_user.id if message.from_user else None,
+        },
+    )
     await message.answer(HELP_TEXT)
-
-
-class SessionHandlers:
-    def __init__(self, user_keys: dict[int, str]) -> None:
-        self.user_keys = user_keys
-
-    async def cmd_login(self, message: types.Message) -> None:
-        if not message.from_user:
-            return
-        args = message.text.split()[1:] if message.text else []
-        if not args:
-            await message.answer("Usage: /login <api_key>")
-            return
-        self.user_keys[message.from_user.id] = args[0]
-        await message.answer("✅ API key saved. You can now ask questions.")
-
-    async def cmd_logout(self, message: types.Message) -> None:
-        if not message.from_user:
-            return
-        self.user_keys.pop(message.from_user.id, None)
-        await message.answer("🔓 API key removed.")
-
-
-class MessageHandler:
-    def __init__(
-        self, nanobot_client: NanobotClient, user_keys: dict[int, str]
-    ) -> None:
-        self.nanobot_client = nanobot_client
-        self.user_keys = user_keys
-
-    async def handle_message(self, message: types.Message) -> None:
-        if not message.from_user or not message.text:
-            return
-        api_key = self.user_keys.get(message.from_user.id, "")
-        if not api_key:
-            await message.answer("🔑 Please set your API key first: /login <api_key>")
-            return
-        response = await route_intent(
-            message.text, self.nanobot_client, api_key=api_key
-        )
-        await render(message, response)
-
-    async def handle_callback(self, callback: types.CallbackQuery) -> None:
-        await callback.answer()
-        if not callback.from_user or not callback.data:
-            return
-        if not isinstance(callback.message, types.Message):
-            return
-        api_key = self.user_keys.get(callback.from_user.id, "")
-        if not api_key:
-            await callback.message.answer(
-                "🔑 Please set your API key first: /login <api_key>"
-            )
-            return
-        response = await route_intent(
-            callback.data, self.nanobot_client, api_key=api_key
-        )
-        await render(callback.message, response)

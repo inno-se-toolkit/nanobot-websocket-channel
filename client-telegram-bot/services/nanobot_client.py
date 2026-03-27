@@ -1,10 +1,13 @@
 """WebSocket client for the nanobot AI agent gateway."""
 
 import json
+import logging
 from typing import Any
 from urllib.parse import urlencode
 
 import websockets
+
+log = logging.getLogger(__name__)
 
 
 class NanobotClient:
@@ -29,10 +32,27 @@ class NanobotClient:
             query["api_key"] = api_key
         if query:
             url = f"{self.ws_url}?{urlencode(query)}"
+        log.info(
+            "telegram_websocket_request",
+            extra={
+                "event": "telegram_websocket_request",
+                "ws_url": self.ws_url,
+                "has_user_api_key": bool(api_key),
+                "message_length": len(message),
+            },
+        )
         async with websockets.connect(url, close_timeout=5) as ws:
             await ws.send(json.dumps({"content": message}))
             raw = await ws.recv()
             data: dict[str, Any] = json.loads(raw)
+            log.info(
+                "telegram_websocket_response",
+                extra={
+                    "event": "telegram_websocket_response",
+                    "response_type": data.get("type", "legacy_text"),
+                    "has_content": bool(data.get("content")),
+                },
+            )
             # Backwards compat: if no type field, wrap as text
             if "type" not in data:
                 return {
