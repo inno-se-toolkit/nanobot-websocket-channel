@@ -7,11 +7,27 @@ from typing import Any
 from urllib.parse import urlencode
 
 import websockets
-from websockets.exceptions import WebSocketException
+from websockets.exceptions import ConnectionClosedError, WebSocketException
 
 from logging_config import event_fields
 
 log = logging.getLogger(__name__)
+
+
+class NanobotClientError(Exception):
+    """Base class for Telegram-facing nanobot client failures."""
+
+
+class NanobotAccessKeyError(NanobotClientError):
+    """Raised when the deployment access key is rejected."""
+
+
+class NanobotTimeoutError(NanobotClientError):
+    """Raised when nanobot does not produce any response in time."""
+
+
+class NanobotTransportError(NanobotClientError):
+    """Raised when the websocket transport fails unexpectedly."""
 
 
 class NanobotClient:
@@ -64,7 +80,9 @@ class NanobotClient:
                         raw = await asyncio.wait_for(ws.recv(), timeout=timeout_s)
                     except TimeoutError:
                         if latest_response is None:
-                            raise
+                            raise NanobotTimeoutError(
+                                "The AI agent did not reply in time."
+                            ) from None
                         break
 
                     frame_count += 1
@@ -108,8 +126,21 @@ class NanobotClient:
                     ws_url=self.ws_url,
                 ),
             )
-            raise
-        except (TimeoutError, WebSocketException):
+            raise NanobotTransportError(
+                "The AI agent returned an unreadable response."
+            ) from None
+        except ConnectionClosedError as exc:
+            if exc.rcvd is not None and exc.rcvd.code == 4001:
+                log.warning(
+                    "telegram_websocket_access_key_rejected",
+                    extra=event_fields(
+                        "telegram_websocket_access_key_rejected",
+                        ws_url=self.ws_url,
+                    ),
+                )
+                raise NanobotAccessKeyError(
+                    "The Telegram bot is using an invalid deployment access key."
+                ) from None
             log.exception(
                 "telegram_websocket_error",
                 extra=event_fields(
@@ -117,4 +148,17 @@ class NanobotClient:
                     ws_url=self.ws_url,
                 ),
             )
-            raise
+            raise NanobotTransportError(
+                "The connection to the AI agent closed unexpectedly."
+            ) from None
+        except (OSError, WebSocketException):
+            log.exception(
+                "telegram_websocket_error",
+                extra=event_fields(
+                    "telegram_websocket_error",
+                    ws_url=self.ws_url,
+                ),
+            )
+            raise NanobotTransportError(
+                "The connection to the AI agent failed."
+            ) from None
