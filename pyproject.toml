@@ -2,7 +2,7 @@
 name = "nanobot-webchat"
 version = "1.0.0"
 description = "WebSocket channel plugin for nanobot-ai — enables web clients to chat with the agent"
-requires-python = "==3.14.2"
+requires-python = "==3.14.*"
 dependencies = [
     "nanobot-ai",
     "websockets>=15.0",
@@ -13,7 +13,7 @@ requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv.sources]
-nanobot-ai = { git = "https://github.com/HKUDS/nanobot.git", rev = "e7d371ec1e6531b28898ec2c869ef338e8dd46ec" }
+nanobot-ai = { url = "https://github.com/HKUDS/nanobot/archive/e7d371ec1e6531b28898ec2c869ef338e8dd46ec.zip" }
 
 [dependency-groups]
 dev = [
@@ -49,12 +49,6 @@ cmd = "flutter pub get"
 cwd = "client-web-flutter"
 
 [tool.pyright]
-include = [
-    "nanobot_webchat",
-    "client-telegram-bot",
-]
-exclude = [
-    "**/__pycache__",
-    "**/.*",
-]
-typeCheckingMode = "standard"
+include = ["nanobot_webchat", "client-telegram-bot"]
+exclude = ["**/__pycache__", "**/.*", "**/node_modules", ".venv"]
+typeCheckingMode = "strict"
