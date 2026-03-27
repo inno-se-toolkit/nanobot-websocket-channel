@@ -8,10 +8,10 @@ output against Pydantic schemas and normalises it into typed models.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 
-from loguru import logger
 from pydantic import TypeAdapter, ValidationError
 
 from .schemas import (
@@ -22,6 +22,7 @@ from .schemas import (
 )
 
 _structured_adapter: TypeAdapter[StructuredMessage] = TypeAdapter(StructuredMessage)
+logger = logging.getLogger(__name__)
 
 _CODE_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*\n(.*?)\n\s*```\s*$", re.DOTALL)
 
@@ -52,7 +53,7 @@ def _parse_structured(data: Any) -> OutboundPayload | None:
             content = data.get("content")
             if isinstance(content, str) and content:
                 logger.warning(
-                    "WebChat: invalid structured message (type={}), "
+                    "WebChat: invalid structured message (type=%s), "
                     "falling back to text",
                     data.get("type"),
                 )

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import uuid
 from typing import Any
@@ -12,7 +13,6 @@ from urllib.parse import parse_qs, urlparse
 import websockets
 from websockets.asyncio.server import Server as WebSocketServer
 from websockets.asyncio.server import ServerConnection
-from loguru import logger
 from pydantic import Field
 
 from nanobot.bus.events import OutboundMessage
@@ -21,6 +21,8 @@ from nanobot.channels.base import BaseChannel
 from nanobot.config.schema import Base
 
 from .structured import parse_outbound
+
+logger = logging.getLogger(__name__)
 
 
 class WebChatConfig(Base):
@@ -69,7 +71,7 @@ class WebChatChannel(BaseChannel):
         self._running = True
         if not self._access_key:
             raise RuntimeError("WebChat: NANOBOT_ACCESS_KEY must be set")
-        logger.info("WebChat starting on {}:{}", self.config.host, self.config.port)
+        logger.info("WebChat starting on %s:%s", self.config.host, self.config.port)
         self._server = await websockets.serve(
             self._handle_ws,
             self.config.host,
@@ -91,13 +93,13 @@ class WebChatChannel(BaseChannel):
         """Send a message back to the client via its WebSocket."""
         ws = self._connections.get(msg.chat_id)
         if ws is None:
-            logger.warning("WebChat: no connection for chat_id={}", msg.chat_id)
+            logger.warning("WebChat: no connection for chat_id=%s", msg.chat_id)
             return
         try:
             result = parse_outbound(msg.content)
             await ws.send(result.model_dump_json())
         except websockets.ConnectionClosed:
-            logger.info("WebChat: connection closed for chat_id={}", msg.chat_id)
+            logger.info("WebChat: connection closed for chat_id=%s", msg.chat_id)
             self._connections.pop(msg.chat_id, None)
 
     async def _handle_ws(self, ws: ServerConnection) -> None:
@@ -117,7 +119,7 @@ class WebChatChannel(BaseChannel):
         self._connections[chat_id] = ws
         sender_id = chat_id
 
-        logger.info("WebChat: new connection chat_id={}", chat_id)
+        logger.info("WebChat: new connection chat_id=%s", chat_id)
 
         try:
             async for raw in ws:
@@ -144,4 +146,4 @@ class WebChatChannel(BaseChannel):
             pass
         finally:
             self._connections.pop(chat_id, None)
-            logger.info("WebChat: disconnected chat_id={}", chat_id)
+            logger.info("WebChat: disconnected chat_id=%s", chat_id)
