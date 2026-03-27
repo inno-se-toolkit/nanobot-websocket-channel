@@ -19,15 +19,15 @@ ENV UV_NO_DEV=1
 ENV UV_PYTHON_DOWNLOADS=0
 
 WORKDIR /app
-COPY pyproject.toml uv.lock* /app/
-COPY client-telegram-bot/pyproject.toml /app/client-telegram-bot/
-COPY nanobot-channel-protocol/pyproject.toml /app/nanobot-channel-protocol/
+COPY --from=workspace pyproject.toml uv.lock /app/
+COPY pyproject.toml /app/client-telegram-bot/
+COPY --from=workspace nanobot-channel-protocol/pyproject.toml /app/nanobot-channel-protocol/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --package client-telegram-bot --no-install-workspace
 
-COPY client-telegram-bot /app/client-telegram-bot
-COPY nanobot-channel-protocol /app/nanobot-channel-protocol
+COPY . /app/client-telegram-bot
+COPY --from=workspace nanobot-channel-protocol /app/nanobot-channel-protocol
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --package client-telegram-bot
