@@ -17,6 +17,54 @@ class LlmService {
 
   LlmService({this.wsUrl = '/ws/chat'});
 
+  /// Probe the WebSocket endpoint before entering the chat UI.
+  ///
+  /// The webchat server rejects invalid access keys by closing the socket
+  /// immediately, so a short grace period is enough to distinguish a bad key
+  /// from a healthy connection.
+  static Future<void> validateAccessKey(
+    String accessKey, {
+    String wsUrl = '/ws/chat',
+    Duration gracePeriod = const Duration(milliseconds: 1500),
+  }) async {
+    final origin = Uri.base;
+    final scheme = origin.scheme == 'https' ? 'wss' : 'ws';
+    final query = '?access_key=${Uri.encodeComponent(accessKey)}';
+    final uri = Uri.parse('$scheme://${origin.host}:${origin.port}$wsUrl$query');
+    final channel = WebSocketChannel.connect(uri);
+    final completer = Completer<void>();
+    var settled = false;
+    Timer? timer;
+
+    void succeed() {
+      if (settled) return;
+      settled = true;
+      timer?.cancel();
+      channel.sink.close();
+      completer.complete();
+    }
+
+    void fail([Object? _]) {
+      if (settled) return;
+      settled = true;
+      timer?.cancel();
+      channel.sink.close();
+      completer.completeError(
+        Exception('Invalid access key or WebSocket connection failed'),
+      );
+    }
+
+    channel.stream.listen(
+      (_) {},
+      onError: fail,
+      onDone: fail,
+      cancelOnError: true,
+    );
+
+    timer = Timer(gracePeriod, succeed);
+    return completer.future;
+  }
+
   /// Connect to the nanobot webchat WebSocket.
   /// Derives the WS URL from the page origin (works when served by Caddy).
   /// When [accessKey] is provided it is sent as a query parameter so the

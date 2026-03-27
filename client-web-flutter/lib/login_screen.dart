@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:web/web.dart' as web;
 
 class LoginScreen extends StatefulWidget {
-  final void Function(String token) onLogin;
+  final Future<String?> Function(String token) onLogin;
 
   const LoginScreen({super.key, required this.onLogin});
 
@@ -13,16 +12,27 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _controller = TextEditingController();
   String? _error;
+  bool _isLoading = false;
 
-  void _handleConnect() {
+  Future<void> _handleConnect() async {
     final key = _controller.text.trim();
     if (key.isEmpty) {
       setState(() => _error = 'Please enter your access key');
       return;
     }
 
-    web.window.localStorage.setItem('access_key', key);
-    widget.onLogin(key);
+    setState(() {
+      _error = null;
+      _isLoading = true;
+    });
+
+    final error = await widget.onLogin(key);
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+      _error = error;
+    });
   }
 
   @override
@@ -57,6 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 24),
                   TextField(
                     controller: _controller,
+                    enabled: !_isLoading,
                     obscureText: true,
                     decoration: const InputDecoration(
                       labelText: 'Access Key',
@@ -72,8 +83,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _handleConnect,
-                      child: const Text('Connect'),
+                      onPressed: _isLoading ? null : _handleConnect,
+                      child: Text(_isLoading ? 'Connecting...' : 'Connect'),
                     ),
                   ),
                 ],

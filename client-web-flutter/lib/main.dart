@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 import 'chat_screen.dart';
+import 'llm_service.dart';
 import 'login_screen.dart';
 
 void main() {
@@ -23,8 +24,17 @@ class _ChatbotAppState extends State<ChatbotApp> {
     _token = web.window.localStorage.getItem('access_key') ?? '';
   }
 
-  void _handleLogin(String token) {
+  Future<String?> _handleLogin(String token) async {
+    try {
+      await LlmService.validateAccessKey(token);
+    } catch (_) {
+      web.window.localStorage.removeItem('access_key');
+      return 'Access key rejected. Please try again.';
+    }
+
+    web.window.localStorage.setItem('access_key', token);
     setState(() => _token = token);
+    return null;
   }
 
   void _handleDisconnect() {
