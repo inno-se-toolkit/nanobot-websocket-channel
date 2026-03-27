@@ -1,5 +1,6 @@
 """WebSocket client for the nanobot AI agent gateway."""
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -15,6 +16,9 @@ log = logging.getLogger(__name__)
 
 class NanobotClient:
     """Forwards messages to the nanobot agent over WebSocket."""
+
+    initial_response_timeout_s = 60
+    trailing_response_timeout_s = 15
 
     def __init__(self, ws_url: str, access_key: str):
         self.ws_url = ws_url
@@ -47,24 +51,55 @@ class NanobotClient:
         try:
             async with websockets.connect(url, close_timeout=5) as ws:
                 await ws.send(json.dumps({"content": message}))
-                raw = await ws.recv()
-                data: dict[str, Any] = json.loads(raw)
-                log.info(
-                    "telegram_websocket_response",
-                    extra=event_fields(
+                latest_response: dict[str, Any] | None = None
+                frame_count = 0
+
+                while True:
+                    timeout_s = (
+                        self.trailing_response_timeout_s
+                        if latest_response is not None
+                        else self.initial_response_timeout_s
+                    )
+                    try:
+                        raw = await asyncio.wait_for(ws.recv(), timeout=timeout_s)
+                    except TimeoutError:
+                        if latest_response is None:
+                            raise
+                        break
+
+                    frame_count += 1
+                    data: dict[str, Any] = json.loads(raw)
+                    log.info(
                         "telegram_websocket_response",
-                        response_type=data.get("type", "legacy_text"),
-                        has_content=bool(data.get("content")),
+                        extra=event_fields(
+                            "telegram_websocket_response",
+                            response_type=data.get("type", "legacy_text"),
+                            has_content=bool(data.get("content")),
+                            frame_count=frame_count,
+                        ),
+                    )
+                    latest_response = data
+
+                final_response = latest_response
+                assert final_response is not None, "nanobot returned no response frames"
+
+                log.info(
+                    "telegram_websocket_response_final",
+                    extra=event_fields(
+                        "telegram_websocket_response_final",
+                        response_type=final_response.get("type", "legacy_text"),
+                        has_content=bool(final_response.get("content")),
+                        frame_count=frame_count,
                     ),
                 )
                 # Backwards compat: if no type field, wrap as text
-                if "type" not in data:
+                if "type" not in final_response:
                     return {
                         "type": "text",
-                        "content": data.get("content", ""),
+                        "content": final_response.get("content", ""),
                         "format": "markdown",
                     }
-                return data
+                return final_response
         except json.JSONDecodeError:
             log.exception(
                 "telegram_websocket_invalid_json",
