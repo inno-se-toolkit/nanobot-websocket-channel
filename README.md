@@ -6,7 +6,7 @@ A WebSocket channel plugin for [nanobot-ai](https://github.com/HKUDS/nanobot), p
 
 | Directory | What it is |
 |---|---|
-| `nanobot_webchat/` | WebSocket channel plugin — registers as a nanobot channel via entry points |
+| `nanobot-webchat/` | Python project for the WebSocket channel plugin |
 | `client-web-flutter/` | Flutter web chat UI — connects to the agent via WebSocket |
 | `client-telegram-bot/` | Telegram bot — bridges Telegram users to the agent via WebSocket |
 
@@ -19,7 +19,7 @@ Nanobot has built-in Telegram support, but the Telegram Bot API is blocked from 
 Install the webchat channel plugin into your nanobot environment:
 
 ```bash
-uv add nanobot-webchat --path /path/to/nanobot-websocket-channel
+uv add nanobot-webchat --path /path/to/nanobot-websocket-channel/nanobot-webchat
 ```
 
 Then enable it in your nanobot `config.json`:
