@@ -1,35 +1,24 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
+
 import 'llm_service.dart';
+import 'protocol.dart';
 
 class ChatMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
-  final Map<String, dynamic>? structured;
+  final OutboundMessage? structured;
 
   ChatMessage({required this.text, required this.isUser, this.structured})
       : timestamp = DateTime.now();
 
-  factory ChatMessage.fromBotResponse(String content) {
-    final parsed = _tryParseStructured(content);
-    if (parsed != null) {
-      final displayText = parsed['content'] as String? ?? content;
-      return ChatMessage(text: displayText, isUser: false, structured: parsed);
-    }
-    return ChatMessage(text: content, isUser: false);
-  }
-
-  static Map<String, dynamic>? _tryParseStructured(String content) {
-    try {
-      final json = jsonDecode(content) as Map<String, dynamic>;
-      final type = json['type'] as String?;
-      if (type == 'choice' || type == 'confirm' || type == 'composite') {
-        return json;
-      }
-    } catch (_) {}
-    return null;
+  factory ChatMessage.fromBotResponse(OutboundMessage response) {
+    return ChatMessage(
+      text: response.displayText,
+      isUser: false,
+      structured: response,
+    );
   }
 }
 
@@ -48,7 +37,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late final LlmService _llm = LlmService();
-  StreamSubscription<String>? _sub;
+  StreamSubscription<OutboundMessage>? _sub;
   bool _isLoading = false;
   Timer? _slowResponseTimer;
   Timer? _hardResponseTimer;
@@ -61,10 +50,10 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     _llm.connect(accessKey: widget.accessKey);
     _sub = _llm.responses.listen(
-      (content) {
+      (response) {
         _cancelResponseTimers();
         setState(() {
-          _messages.add(ChatMessage.fromBotResponse(content));
+          _messages.add(ChatMessage.fromBotResponse(response));
           _isLoading = false;
         });
         _scrollToBottom();
@@ -250,23 +239,22 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildStructuredMessage(Map<String, dynamic> data) {
-    final type = data['type'] as String;
-    switch (type) {
-      case 'choice':
-        return _buildChoiceMessage(data);
-      case 'confirm':
-        return _buildConfirmMessage(data);
-      case 'composite':
-        return _buildCompositeMessage(data);
-      default:
-        return _buildBotBubble(data['content'] as String? ?? '');
+  Widget _buildStructuredMessage(OutboundMessage data) {
+    if (data is ChoiceMessage) {
+      return _buildChoiceMessage(data);
     }
+    if (data is ConfirmMessage) {
+      return _buildConfirmMessage(data);
+    }
+    if (data is CompositeMessage) {
+      return _buildCompositeMessage(data);
+    }
+    return _buildBotBubble(data.displayText);
   }
 
-  Widget _buildChoiceMessage(Map<String, dynamic> data) {
-    final content = data['content'] as String? ?? '';
-    final options = (data['options'] as List<dynamic>?) ?? [];
+  Widget _buildChoiceMessage(ChoiceMessage data) {
+    final content = data.content;
+    final options = data.options;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -300,11 +288,9 @@ class _ChatScreenState extends State<ChatScreen> {
               spacing: 6,
               runSpacing: 6,
               children: options.map<Widget>((opt) {
-                final label = opt['label'] as String? ?? '';
-                final value = opt['value'] as String? ?? label;
                 return ActionChip(
-                  label: Text(label),
-                  onPressed: _isLoading ? null : () => _sendMessage(value),
+                  label: Text(opt.label),
+                  onPressed: _isLoading ? null : () => _sendMessage(opt.value),
                   backgroundColor: Colors.white,
                   side: BorderSide(
                     color: Theme.of(context).colorScheme.primary,
@@ -321,8 +307,8 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildConfirmMessage(Map<String, dynamic> data) {
-    final content = data['content'] as String? ?? '';
+  Widget _buildConfirmMessage(ConfirmMessage data) {
+    final content = data.content;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -378,16 +364,15 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildCompositeMessage(Map<String, dynamic> data) {
-    final parts = (data['parts'] as List<dynamic>?) ?? [];
+  Widget _buildCompositeMessage(CompositeMessage data) {
+    final parts = data.parts;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: parts.map<Widget>((part) {
-        final partMap = part as Map<String, dynamic>;
-        final type = partMap['type'] as String?;
-        if (type == 'choice') return _buildChoiceMessage(partMap);
-        if (type == 'confirm') return _buildConfirmMessage(partMap);
-        return _buildBotBubble(partMap['content'] as String? ?? '');
+        if (part is ChoiceMessage) return _buildChoiceMessage(part);
+        if (part is ConfirmMessage) return _buildConfirmMessage(part);
+        if (part is CompositeMessage) return _buildCompositeMessage(part);
+        return _buildBotBubble(part.displayText);
       }).toList(),
     );
   }

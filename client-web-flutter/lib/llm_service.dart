@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'protocol.dart';
+
 /// Nanobot webchat client over WebSocket.
 ///
 /// Connects to the nanobot webchat channel and sends/receives messages.
@@ -9,8 +11,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// display them (progress vs final answer are both chat bubbles).
 class LlmService {
   WebSocketChannel? _channel;
-  final StreamController<String> _responses =
-      StreamController<String>.broadcast();
+  final StreamController<OutboundMessage> _responses =
+      StreamController<OutboundMessage>.broadcast();
 
   /// WebSocket URL path (appended to the page origin).
   final String wsUrl;
@@ -80,17 +82,11 @@ class LlmService {
     _channel!.stream.listen(
       (data) {
         try {
-          final msg = jsonDecode(data as String) as Map<String, dynamic>;
-          final type = msg['type'] as String? ?? 'text';
-          if (type == 'choice' || type == 'confirm' || type == 'composite') {
-            // Forward the full JSON so the UI can render interactive widgets.
-            _responses.add(jsonEncode(msg));
-          } else {
-            final content = msg['content'] as String? ?? '';
-            if (content.isNotEmpty) {
-              _responses.add(content);
-            }
+          final response = OutboundMessage.fromWire(data as String);
+          if (response is TextMessage && response.content.isEmpty) {
+            return;
           }
+          _responses.add(response);
         } catch (_) {}
       },
       onError: (error) {
@@ -109,7 +105,7 @@ class LlmService {
   }
 
   /// Stream of all incoming response messages from nanobot.
-  Stream<String> get responses => _responses.stream;
+  Stream<OutboundMessage> get responses => _responses.stream;
 
   bool get isConnected => _channel != null;
 
