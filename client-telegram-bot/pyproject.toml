@@ -3,4 +3,12 @@ name = "lms-client-telegram-bot"
 version = "0.1.0"
 description = "LMS Telegram Bot"
 requires-python = "==3.14.*"
-dependencies = ["aiogram>=3.20", "pydantic-settings>=2.0", "websockets>=15.0"]
+dependencies = [
+    "aiogram>=3.20",
+    "opentelemetry-distro[otlp]>=0.61b0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.40.0",
+    "opentelemetry-instrumentation-aiohttp-client>=0.61b0",
+    "opentelemetry-instrumentation-logging>=0.61b0",
+    "pydantic-settings>=2.0",
+    "websockets>=15.0",
+]
