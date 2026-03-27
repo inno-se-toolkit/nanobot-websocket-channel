@@ -17,17 +17,9 @@ nanobot-ai = { url = "https://github.com/HKUDS/nanobot/archive/e7d371ec1e6531b28
 
 [dependency-groups]
 dev = [
-    "aiogram>=3.20",
     "poethepoet>=0.40.0",
-    "pydantic-settings>=2.0",
     "pyright==1.1.408",
 ]
-
-[tool.setuptools.packages.find]
-include = ["nanobot_webchat*"]
-
-[project.entry-points."nanobot.channels"]
-webchat = "nanobot_webchat:WebChatChannel"
 
 [tool.poe.tasks]
 [tool.poe.tasks.typecheck]
