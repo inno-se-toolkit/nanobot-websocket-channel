@@ -1,8 +1,4 @@
-"""Pydantic schemas for structured WebChat messages.
-
-Clients render these as interactive widgets (choice chips, confirm buttons,
-composite layouts) instead of plain text.
-"""
+"""Pydantic schemas for structured nanobot channel messages."""
 
 from __future__ import annotations
 

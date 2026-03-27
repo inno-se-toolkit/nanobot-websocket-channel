@@ -4,8 +4,16 @@ from typing import Any
 
 from aiogram import types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from nanobot_channel_protocol.schemas import (
+    ChoiceMessage,
+    ConfirmMessage,
+    OutboundPayload,
+    TextPart,
+)
+from pydantic import TypeAdapter
 
 TELEGRAM_MAX_LENGTH = 4096
+_outbound_adapter: TypeAdapter[OutboundPayload] = TypeAdapter(OutboundPayload)
 
 
 def _split_text(text: str, limit: int = TELEGRAM_MAX_LENGTH) -> list[str]:
@@ -28,42 +36,37 @@ def _split_text(text: str, limit: int = TELEGRAM_MAX_LENGTH) -> list[str]:
 
 async def render(message: types.Message, response: dict[str, Any]) -> None:
     """Render a structured nanobot response to a Telegram chat."""
-    msg_type = response.get("type", "text")
+    parsed = _outbound_adapter.validate_python(response)
 
-    if msg_type == "text":
-        await _render_text(message, response)
-    elif msg_type == "choice":
-        await _render_choice(message, response)
-    elif msg_type == "confirm":
-        await _render_confirm(message, response)
-    elif msg_type == "composite":
-        for part in response.get("parts", []):
-            await render(message, part)
+    if isinstance(parsed, TextPart):
+        await _render_text(message, parsed)
+    elif isinstance(parsed, ChoiceMessage):
+        await _render_choice(message, parsed)
+    elif isinstance(parsed, ConfirmMessage):
+        await _render_confirm(message, parsed)
     else:
-        # Unknown type — render content as plain text
-        await message.answer(response.get("content", str(response)))
+        for part in parsed.parts:
+            await render(message, part.model_dump())
 
 
-async def _render_text(message: types.Message, response: dict[str, Any]) -> None:
-    content = response.get("content", "")
-    for chunk in _split_text(content):
+async def _render_text(message: types.Message, response: TextPart) -> None:
+    for chunk in _split_text(response.content):
         await message.answer(chunk)
 
 
-async def _render_choice(message: types.Message, response: dict[str, Any]) -> None:
-    content = response.get("content", "Choose an option:")
-    options: list[dict[str, str]] = response.get("options", [])
+async def _render_choice(message: types.Message, response: ChoiceMessage) -> None:
+    content = response.content or "Choose an option:"
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=opt["label"], callback_data=opt["value"])]
-            for opt in options
+            [InlineKeyboardButton(text=opt.label, callback_data=opt.value)]
+            for opt in response.options
         ]
     )
     await message.answer(content, reply_markup=keyboard)
 
 
-async def _render_confirm(message: types.Message, response: dict[str, Any]) -> None:
-    content = response.get("content", "Are you sure?")
+async def _render_confirm(message: types.Message, response: ConfirmMessage) -> None:
+    content = response.content or "Are you sure?"
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [

@@ -5,6 +5,7 @@ description = "LMS Telegram Bot"
 requires-python = "==3.14.*"
 dependencies = [
     "aiogram>=3.20",
+    "nanobot-channel-protocol",
     "opentelemetry-distro[otlp]>=0.61b0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.40.0",
     "opentelemetry-instrumentation-aiohttp-client>=0.61b0",
@@ -16,6 +17,9 @@ dependencies = [
 [build-system]
 requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.uv.sources]
+nanobot-channel-protocol = { workspace = true }
 
 [tool.setuptools]
 py-modules = ["bot", "settings"]

@@ -12,14 +12,13 @@ import logging
 import re
 from typing import Any
 
-from pydantic import TypeAdapter, ValidationError
-
-from .schemas import (
+from nanobot_channel_protocol.schemas import (
     CompositeMessage,
     OutboundPayload,
     StructuredMessage,
     TextPart,
 )
+from pydantic import TypeAdapter, ValidationError
 
 _structured_adapter: TypeAdapter[StructuredMessage] = TypeAdapter(StructuredMessage)
 logger = logging.getLogger(__name__)
