@@ -153,16 +153,18 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length) {
-                  return _buildLoadingBubble();
-                }
-                return _buildMessageBubble(_messages[index]);
-              },
+            child: SelectionArea(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: _messages.length + (_isLoading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == _messages.length) {
+                    return _buildLoadingBubble();
+                  }
+                  return _buildMessageBubble(_messages[index]);
+                },
+              ),
             ),
           ),
           _buildInputArea(),
@@ -197,10 +199,38 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         child: SelectableText(
           message.text,
+          textAlign: TextAlign.left,
           style: TextStyle(
             color: isUser ? Colors.white : Colors.black87,
             fontSize: 15,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBotBubble(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(16),
+          ),
+        ),
+        child: SelectableText(
+          text,
+          textAlign: TextAlign.left,
+          style: const TextStyle(color: Colors.black87, fontSize: 15),
         ),
       ),
     );
@@ -248,6 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: SelectableText(
                   content,
+                  textAlign: TextAlign.left,
                   style: const TextStyle(color: Colors.black87, fontSize: 15),
                 ),
               ),
@@ -303,6 +334,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: SelectableText(
                   content,
+                  textAlign: TextAlign.left,
                   style: const TextStyle(color: Colors.black87, fontSize: 15),
                 ),
               ),
@@ -343,32 +375,6 @@ class _ChatScreenState extends State<ChatScreen> {
         if (type == 'confirm') return _buildConfirmMessage(partMap);
         return _buildBotBubble(partMap['content'] as String? ?? '');
       }).toList(),
-    );
-  }
-
-  Widget _buildBotBubble(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(4),
-            bottomRight: Radius.circular(16),
-          ),
-        ),
-        child: SelectableText(
-          text,
-          style: const TextStyle(color: Colors.black87, fontSize: 15),
-        ),
-      ),
     );
   }
 

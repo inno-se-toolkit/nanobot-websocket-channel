@@ -50,6 +50,11 @@ class _ChatbotAppState extends State<ChatbotApp> {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
+        textSelectionTheme: const TextSelectionThemeData(
+          selectionColor: Color(0x66FFD54F),
+          selectionHandleColor: Color(0xFF1A237E),
+          cursorColor: Color(0xFF1A237E),
+        ),
       ),
       home: _token.isEmpty
           ? LoginScreen(onLogin: _handleLogin)
