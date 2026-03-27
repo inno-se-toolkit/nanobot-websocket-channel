@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["nanobot-channel-protocol", "nanobot-webchat", "client-telegram-bot"]
+members = ["nanobot-channel-protocol", "nanobot-webchat", "mcp-webchat", "client-telegram-bot"]
 
 [dependency-groups]
 dev = [
@@ -18,7 +18,7 @@ help = "Run pyright on Python packages"
 cmd = "pyright"
 
 [tool.pyright]
-include = ["nanobot-channel-protocol", "nanobot-webchat", "client-telegram-bot"]
+include = ["nanobot-channel-protocol", "nanobot-webchat", "mcp-webchat", "client-telegram-bot"]
 exclude = ["**/__pycache__", "**/.*", "**/node_modules", ".venv"]
 typeCheckingMode = "strict"
 reportUnknownMemberType = "none"
