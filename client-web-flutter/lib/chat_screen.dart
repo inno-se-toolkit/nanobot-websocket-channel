@@ -50,9 +50,11 @@ class _ChatScreenState extends State<ChatScreen> {
   late final LlmService _llm = LlmService();
   StreamSubscription<String>? _sub;
   bool _isLoading = false;
-  Timer? _responseTimeout;
+  Timer? _slowResponseTimer;
+  Timer? _hardResponseTimer;
 
-  static const _timeoutDuration = Duration(seconds: 90);
+  static const _slowResponseDuration = Duration(seconds: 20);
+  static const _hardResponseDuration = Duration(seconds: 120);
 
   @override
   void initState() {
@@ -60,7 +62,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _llm.connect(accessKey: widget.accessKey);
     _sub = _llm.responses.listen(
       (content) {
-        _responseTimeout?.cancel();
+        _cancelResponseTimers();
         setState(() {
           _messages.add(ChatMessage.fromBotResponse(content));
           _isLoading = false;
@@ -82,20 +84,32 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _handleDisconnect() {
-    _responseTimeout?.cancel();
+    _cancelResponseTimers();
     if (!mounted) return;
     setState(() => _isLoading = false);
     _addBotMessage('Connection lost. Please refresh the page to reconnect.');
   }
 
-  void _startResponseTimeout() {
-    _responseTimeout?.cancel();
-    _responseTimeout = Timer(_timeoutDuration, () {
+  void _cancelResponseTimers() {
+    _slowResponseTimer?.cancel();
+    _hardResponseTimer?.cancel();
+  }
+
+  void _startResponseTimeouts() {
+    _cancelResponseTimers();
+    _slowResponseTimer = Timer(_slowResponseDuration, () {
+      if (!mounted) return;
+      _addBotMessage(
+        'The assistant is still working on this request. '
+        'Slow responses can happen when the model is busy.',
+      );
+    });
+    _hardResponseTimer = Timer(_hardResponseDuration, () {
       if (!mounted) return;
       setState(() => _isLoading = false);
       _addBotMessage(
-        'The assistant is taking too long to respond. '
-        'Try again or refresh the page.',
+        'This request is taking unusually long. '
+        'You can keep waiting or send a shorter follow-up question.',
       );
     });
   }
@@ -131,7 +145,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     _llm.send(trimmed);
-    _startResponseTimeout();
+    _startResponseTimeouts();
   }
 
   @override
@@ -445,7 +459,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
-    _responseTimeout?.cancel();
+    _cancelResponseTimers();
     _sub?.cancel();
     _controller.dispose();
     _scrollController.dispose();
