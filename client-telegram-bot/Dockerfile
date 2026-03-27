@@ -19,16 +19,15 @@ ENV UV_NO_DEV=1
 ENV UV_PYTHON_DOWNLOADS=0
 
 WORKDIR /app
-COPY --from=workspace pyproject.toml uv.lock /app/
-COPY pyproject.toml /app/client-telegram-bot/pyproject.toml
+COPY pyproject.toml uv.lock* /app/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-workspace --package lms-client-telegram-bot
+    uv sync --frozen --no-install-project
 
-COPY . /app/client-telegram-bot
+COPY . /app
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --package lms-client-telegram-bot
+    uv sync --frozen
 
 # ---
 # Stage 2: use a final image without uv
@@ -59,5 +58,5 @@ USER nonroot
 # Use `/app` as the working directory
 WORKDIR /app
 
-# Run the bot
-CMD ["python", "client-telegram-bot/bot.py"]
+# Run the bot with OTEL auto-instrumentation
+CMD ["opentelemetry-instrument", "python", "bot.py"]
