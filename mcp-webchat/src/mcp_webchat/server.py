@@ -23,9 +23,7 @@ server = Server("webchat")
 
 
 class _UiMessageQuery(BaseModel):
-    chat_id: str = Field(
-        description="Active WebChat chat ID from the runtime context."
-    )
+    chat_id: str = Field(description="Active WebChat chat ID from the runtime context.")
     payload: dict[str, Any] = Field(
         description=(
             "Structured outbound payload with type text, choice, confirm, or composite."
