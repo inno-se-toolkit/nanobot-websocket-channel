@@ -2,6 +2,9 @@
 
 A WebSocket channel plugin for [nanobot-ai](https://github.com/HKUDS/nanobot), plus web and Telegram clients that connect through it.
 
+See [architecture.md](architecture.md) for the workspace structure, shared
+protocol, and build model.
+
 ## What's inside
 
 | Directory | What it is |
