@@ -7,10 +7,10 @@ protocol, and build model.
 
 ## What's inside
 
-| Directory | What it is |
-|---|---|
-| `nanobot-webchat/` | Python project for the WebSocket channel plugin |
-| `client-web-flutter/` | Flutter web chat UI — connects to the agent via WebSocket |
+| Directory              | What it is                                                       |
+| ---------------------- | ---------------------------------------------------------------- |
+| `nanobot-webchat/`     | Python project for the WebSocket channel plugin                  |
+| `client-web-flutter/`  | Flutter web chat UI — connects to the agent via WebSocket        |
 | `client-telegram-bot/` | Telegram bot — bridges Telegram users to the agent via WebSocket |
 
 ## Why WebSocket?
