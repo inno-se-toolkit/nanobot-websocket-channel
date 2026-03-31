@@ -3,4 +3,3 @@ __pycache__/
 .dart_tool/
 .flutter-plugins-dependencies
 build/
-uv.lock
