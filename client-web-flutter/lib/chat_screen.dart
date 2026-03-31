@@ -41,6 +41,8 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
   Timer? _slowResponseTimer;
   Timer? _hardResponseTimer;
+  final Stopwatch _elapsed = Stopwatch();
+  Timer? _elapsedTicker;
 
   static const _slowResponseDuration = Duration(seconds: 20);
   static const _hardResponseDuration = Duration(seconds: 120);
@@ -82,10 +84,22 @@ class _ChatScreenState extends State<ChatScreen> {
   void _cancelResponseTimers() {
     _slowResponseTimer?.cancel();
     _hardResponseTimer?.cancel();
+    _stopElapsed();
+  }
+
+  void _stopElapsed() {
+    _elapsedTicker?.cancel();
+    _elapsed.stop();
+  }
+
+  void _stopWaiting() {
+    _cancelResponseTimers();
+    setState(() => _isLoading = false);
   }
 
   void _startResponseTimeouts() {
-    _cancelResponseTimers();
+    _slowResponseTimer?.cancel();
+    _hardResponseTimer?.cancel();
     _slowResponseTimer = Timer(_slowResponseDuration, () {
       if (!mounted) return;
       _addBotMessage(
@@ -134,6 +148,12 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     _llm.send(trimmed);
+    _elapsed.reset();
+    _elapsed.start();
+    _elapsedTicker = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => setState(() {}),
+    );
     _startResponseTimeouts();
   }
 
@@ -378,6 +398,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildLoadingBubble() {
+    final seconds = _elapsed.elapsed.inSeconds;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -392,16 +413,20 @@ class _ChatScreenState extends State<ChatScreen> {
             bottomRight: Radius.circular(16),
           ),
         ),
-        child: const SizedBox(
-          width: 48,
-          height: 24,
-          child: Center(
-            child: SizedBox(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          ),
+            const SizedBox(width: 10),
+            Text(
+              seconds > 0 ? 'Thinking... ${seconds}s' : 'Thinking...',
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            ),
+          ],
         ),
       ),
     );
@@ -427,16 +452,24 @@ class _ChatScreenState extends State<ChatScreen> {
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
-              onSubmitted: _sendMessage,
-              enabled: !_isLoading,
+              onSubmitted: _isLoading ? null : _sendMessage,
             ),
           ),
           const SizedBox(width: 8),
-          IconButton.filled(
-            onPressed:
-                _isLoading ? null : () => _sendMessage(_controller.text),
-            icon: const Icon(Icons.send),
-          ),
+          if (_isLoading)
+            IconButton.filled(
+              onPressed: _stopWaiting,
+              icon: const Icon(Icons.stop),
+              tooltip: 'Stop waiting',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.red[400],
+              ),
+            )
+          else
+            IconButton.filled(
+              onPressed: () => _sendMessage(_controller.text),
+              icon: const Icon(Icons.send),
+            ),
         ],
       ),
     );
