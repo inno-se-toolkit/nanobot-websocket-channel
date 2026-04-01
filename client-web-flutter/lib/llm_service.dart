@@ -67,18 +67,39 @@ class LlmService {
     return completer.future;
   }
 
+  String? _accessKey;
+  bool _disposed = false;
+  int _reconnectAttempts = 0;
+  Timer? _reconnectTimer;
+
+  static const _maxReconnectDelay = Duration(seconds: 30);
+
+  /// Stream that emits `true` on connect and `false` on disconnect.
+  final StreamController<bool> _connectionState =
+      StreamController<bool>.broadcast();
+  Stream<bool> get connectionState => _connectionState.stream;
+
   /// Connect to the nanobot webchat WebSocket.
   /// Derives the WS URL from the page origin (works when served by Caddy).
   /// When [accessKey] is provided it is sent as a query parameter so the
   /// channel can validate access to the deployment.
   void connect({String? accessKey}) {
+    _accessKey = accessKey;
+    _connectInternal();
+  }
+
+  void _connectInternal() {
+    if (_disposed) return;
+    _channel?.sink.close();
     final origin = Uri.base;
     final scheme = origin.scheme == 'https' ? 'wss' : 'ws';
-    final query = accessKey != null
-        ? '?access_key=${Uri.encodeComponent(accessKey)}'
+    final query = _accessKey != null
+        ? '?access_key=${Uri.encodeComponent(_accessKey!)}'
         : '';
     final uri = Uri.parse('$scheme://${origin.host}:${origin.port}$wsUrl$query');
     _channel = WebSocketChannel.connect(uri);
+    _reconnectAttempts = 0;
+    _connectionState.add(true);
     _channel!.stream.listen(
       (data) {
         try {
@@ -89,13 +110,21 @@ class LlmService {
           _responses.add(response);
         } catch (_) {}
       },
-      onError: (error) {
-        _responses.addError(error);
-      },
-      onDone: () {
-        _responses.addError(Exception('WebSocket closed'));
-      },
+      onError: (_) => _scheduleReconnect(),
+      onDone: () => _scheduleReconnect(),
     );
+  }
+
+  void _scheduleReconnect() {
+    if (_disposed) return;
+    _channel = null;
+    _connectionState.add(false);
+    final delay = Duration(
+      seconds: (1 << _reconnectAttempts).clamp(1, _maxReconnectDelay.inSeconds),
+    );
+    _reconnectAttempts++;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(delay, _connectInternal);
   }
 
   /// Send a message to nanobot.
@@ -110,12 +139,15 @@ class LlmService {
   bool get isConnected => _channel != null;
 
   void disconnect() {
+    _reconnectTimer?.cancel();
     _channel?.sink.close();
     _channel = null;
   }
 
   void dispose() {
+    _disposed = true;
     disconnect();
     _responses.close();
+    _connectionState.close();
   }
 }

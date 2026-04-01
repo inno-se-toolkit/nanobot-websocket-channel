@@ -38,7 +38,9 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   late final LlmService _llm = LlmService();
   StreamSubscription<OutboundMessage>? _sub;
+  StreamSubscription<bool>? _connSub;
   bool _isLoading = false;
+  bool _isConnected = true;
   Timer? _slowResponseTimer;
   Timer? _hardResponseTimer;
   final Stopwatch _elapsed = Stopwatch();
@@ -60,9 +62,18 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         _scrollToBottom();
       },
-      onError: (_) => _handleDisconnect(),
-      onDone: () => _handleDisconnect(),
     );
+    _connSub = _llm.connectionState.listen((connected) {
+      if (!mounted) return;
+      if (connected && !_isConnected) {
+        _addBotMessage('Reconnected.');
+      } else if (!connected && _isConnected) {
+        _cancelResponseTimers();
+        setState(() => _isLoading = false);
+        _addBotMessage('Connection lost. Reconnecting...');
+      }
+      setState(() => _isConnected = connected);
+    });
     _addBotMessage(
       'Connected to Nanobot!\n\n'
       'Start by asking:\n'
@@ -72,13 +83,6 @@ class _ChatScreenState extends State<ChatScreen> {
       'I am more than a chat UI only when the agent has tools, skills, and memory. '
       'Try discovering those capabilities from the conversation itself.',
     );
-  }
-
-  void _handleDisconnect() {
-    _cancelResponseTimers();
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    _addBotMessage('Connection lost. Please refresh the page to reconnect.');
   }
 
   void _cancelResponseTimers() {
@@ -110,10 +114,9 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _hardResponseTimer = Timer(_hardResponseDuration, () {
       if (!mounted) return;
-      setState(() => _isLoading = false);
       _addBotMessage(
         'This request is taking unusually long. '
-        'You can keep waiting or send a shorter follow-up question.',
+        'Press the stop button to cancel and try again.',
       );
     });
   }
@@ -480,6 +483,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _cancelResponseTimers();
     _sub?.cancel();
+    _connSub?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     _llm.dispose();
