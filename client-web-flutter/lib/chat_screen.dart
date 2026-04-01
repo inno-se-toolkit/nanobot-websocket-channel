@@ -93,6 +93,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _stopWaiting() {
+    _llm.send('/stop');
     _cancelResponseTimers();
     setState(() => _isLoading = false);
   }
